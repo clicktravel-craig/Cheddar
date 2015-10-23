@@ -68,14 +68,13 @@ public class TransactionalDatabaseTemplate implements DatabaseTemplate, Transact
             currentTransaction.remove();
             logger.trace("Transaction successfully committed: " + transaction.transactionId());
         } catch (final Throwable e) {
-            throw new TransactionalResourceException(
-                    "Failed to commit DatabaseTemplate transaction: " + transaction.transactionId(), e);
+            throw new TransactionalResourceException("Failed to commit DatabaseTemplate transaction: "
+                    + transaction.transactionId(), e);
         }
     }
 
     @Override
-    public <T extends Item> T create(final T item,
-            final PersistenceExceptionHandler<?>... persistenceExceptionHandlers) {
+    public <T extends Item> T create(final T item, final PersistenceExceptionHandler<?>... persistenceExceptionHandlers) {
         final DatabaseTransaction transaction = getCurrentTransaction();
         final List<PersistenceExceptionHandler<?>> persistenceExceptionHandlerList = new ArrayList<PersistenceExceptionHandler<?>>();
         Collections.addAll(persistenceExceptionHandlerList, persistenceExceptionHandlers);
@@ -84,8 +83,7 @@ public class TransactionalDatabaseTemplate implements DatabaseTemplate, Transact
     }
 
     @Override
-    public <T extends Item> T update(final T item,
-            final PersistenceExceptionHandler<?>... persistenceExceptionHandlers) {
+    public <T extends Item> T update(final T item, final PersistenceExceptionHandler<?>... persistenceExceptionHandlers) {
         final DatabaseTransaction transaction = getCurrentTransaction();
         final List<PersistenceExceptionHandler<?>> persistenceExceptionHandlerList = new ArrayList<PersistenceExceptionHandler<?>>();
         Collections.addAll(persistenceExceptionHandlerList, persistenceExceptionHandlers);
@@ -112,11 +110,6 @@ public class TransactionalDatabaseTemplate implements DatabaseTemplate, Transact
     }
 
     @Override
-    public <T extends Item> Collection<T> fetch(final Query query, final Class<T> itemClass, final int maxPageSize) {
-        return databaseTemplate.fetch(query, itemClass, maxPageSize);
-    }
-
-    @Override
     public <T extends Item> T fetchUnique(final Query query, final Class<T> itemClass) throws NonUniqueResultException {
         return databaseTemplate.fetchUnique(query, itemClass);
     }
@@ -130,4 +123,5 @@ public class TransactionalDatabaseTemplate implements DatabaseTemplate, Transact
     public void abort() throws TransactionException {
         currentTransaction.remove();
     }
+
 }

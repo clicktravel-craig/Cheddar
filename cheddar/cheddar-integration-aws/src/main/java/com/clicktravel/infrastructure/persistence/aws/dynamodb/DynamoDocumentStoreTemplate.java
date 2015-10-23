@@ -115,8 +115,7 @@ public class DynamoDocumentStoreTemplate extends AbstractDynamoDbTemplate {
     }
 
     @Override
-    public <T extends Item> T create(final T item,
-            final PersistenceExceptionHandler<?>... persistenceExceptionHandlers) {
+    public <T extends Item> T create(final T item, final PersistenceExceptionHandler<?>... persistenceExceptionHandlers) {
         item.setVersion(1l);
         final ItemConfiguration itemConfiguration = getItemConfiguration(item.getClass());
         final Collection<PropertyDescriptor> createdConstraintPropertyDescriptors = createUniqueConstraintIndexes(item,
@@ -159,8 +158,8 @@ public class DynamoDocumentStoreTemplate extends AbstractDynamoDbTemplate {
         if (tableItem != null) {
             final String tableText = tableItem.toJSON();
             if (tableText.isEmpty()) {
-                throw new NonExistentItemException(String
-                        .format("The document of type [%s] with id [%s] does not exist", itemClass.getName(), itemId));
+                throw new NonExistentItemException(String.format(
+                        "The document of type [%s] with id [%s] does not exist", itemClass.getName(), itemId));
             }
             item = stringToItem(tableText, itemClass);
         } else {
@@ -171,8 +170,7 @@ public class DynamoDocumentStoreTemplate extends AbstractDynamoDbTemplate {
     }
 
     @Override
-    public <T extends Item> T update(final T item,
-            final PersistenceExceptionHandler<?>... persistenceExceptionHandlers) {
+    public <T extends Item> T update(final T item, final PersistenceExceptionHandler<?>... persistenceExceptionHandlers) {
         final ItemConfiguration itemConfiguration = getItemConfiguration(item.getClass());
         if (item.getVersion() == null) {
             return create(item);
@@ -212,8 +210,8 @@ public class DynamoDocumentStoreTemplate extends AbstractDynamoDbTemplate {
     public void delete(final Item item, final PersistenceExceptionHandler<?>... persistenceExceptionHandlers) {
         final ItemConfiguration itemConfiguration = getItemConfiguration(item.getClass());
         final String tableName = databaseSchemaHolder.schemaName() + "." + itemConfiguration.tableName();
-        final DeleteItemSpec deleteItemSpec = new DeleteItemSpec()
-                .withPrimaryKey(getPrimaryKey(itemConfiguration.getItemId(item), itemConfiguration));
+        final DeleteItemSpec deleteItemSpec = new DeleteItemSpec().withPrimaryKey(getPrimaryKey(
+                itemConfiguration.getItemId(item), itemConfiguration));
 
         final Table table = dynamoDBClient.getTable(tableName);
         table.deleteItem(deleteItemSpec);
@@ -224,33 +222,21 @@ public class DynamoDocumentStoreTemplate extends AbstractDynamoDbTemplate {
 
     @Override
     public <T extends Item> Collection<T> fetch(final Query query, final Class<T> itemClass) {
-        return fetch(query, itemClass, 0);
-    }
-
-    @Override
-    public <T extends Item> Collection<T> fetch(final Query query, final Class<T> itemClass, final int maxPageSize) {
         final long startTimeMillis = System.currentTimeMillis();
-
         Collection<T> result;
-
         if (query instanceof AttributeQuery) {
-            result = executeQuery((AttributeQuery) query, itemClass, maxPageSize);
+            result = executeQuery((AttributeQuery) query, itemClass);
         } else if (query instanceof KeySetQuery) {
             result = executeQuery((KeySetQuery) query, itemClass);
         } else {
             throw new UnsupportedQueryException(query.getClass());
         }
-
         final long elapsedTimeMillis = System.currentTimeMillis() - startTimeMillis;
-
-        logger.debug("Database fetch executed in " + elapsedTimeMillis + "ms. Query:[" + query + "]. "
-                + (maxPageSize > 0 ? "Using maxPageSize [" + maxPageSize + "]." : ""));
-
+        logger.debug("Database fetch executed in " + elapsedTimeMillis + "ms. Query:[" + query + "]");
         return result;
     }
 
-    private <T extends Item> Collection<T> executeQuery(final AttributeQuery query, final Class<T> itemClass,
-            final int maxPageSize) {
+    private <T extends Item> Collection<T> executeQuery(final AttributeQuery query, final Class<T> itemClass) {
         final ItemConfiguration itemConfiguration = getItemConfiguration(itemClass);
         final String tableName = databaseSchemaHolder.schemaName() + "." + itemConfiguration.tableName();
 
@@ -261,7 +247,7 @@ public class DynamoDocumentStoreTemplate extends AbstractDynamoDbTemplate {
         if (itemConfiguration.hasIndexOn(query.getAttributeName())
                 && query.getCondition().getComparisonOperator() == Operators.EQUALS) {
 
-            final QuerySpec querySpec = generateQuerySpec(query, maxPageSize);
+            final QuerySpec querySpec = generateQuerySpec(query);
             final ItemCollection<QueryOutcome> queryOutcome;
 
             if (itemConfiguration.primaryKeyDefinition().propertyName().equals(query.getAttributeName())) {
@@ -281,7 +267,7 @@ public class DynamoDocumentStoreTemplate extends AbstractDynamoDbTemplate {
             logger.debug("Performing table scan with query: " + query);
             ScanSpec scanSpec = null;
             try {
-                scanSpec = generateScanSpec(query, itemClass, maxPageSize);
+                scanSpec = generateScanSpec(query, itemClass);
             } catch (InstantiationException | IllegalAccessException | IllegalArgumentException
                     | InvocationTargetException | NoSuchMethodException | SecurityException e) {
                 throw new PersistenceResourceFailureException("Could not create ScanSpec for query: " + query, e);
@@ -298,20 +284,15 @@ public class DynamoDocumentStoreTemplate extends AbstractDynamoDbTemplate {
         return totalItems;
     }
 
-    private QuerySpec generateQuerySpec(final AttributeQuery query, final int maxPageSize) {
-        final QuerySpec querySpec = new QuerySpec().withHashKey(query.getAttributeName(),
-                query.getCondition().getValues().iterator().next());
-
-        if (maxPageSizeOverridden(maxPageSize)) {
-            querySpec.withMaxPageSize(maxPageSize);
-        }
-
+    private QuerySpec generateQuerySpec(final AttributeQuery query) {
+        final QuerySpec querySpec = new QuerySpec().withHashKey(query.getAttributeName(), query.getCondition()
+                .getValues().iterator().next());
         return querySpec;
     }
 
-    private <T extends Item> ScanSpec generateScanSpec(final AttributeQuery query, final Class<T> tableItemType,
-            final int maxPageSize) throws InstantiationException, IllegalAccessException, IllegalArgumentException,
-                    InvocationTargetException, NoSuchMethodException, SecurityException {
+    private <T extends Item> ScanSpec generateScanSpec(final AttributeQuery query, final Class<T> tableItemType)
+            throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException,
+            NoSuchMethodException, SecurityException {
         final Class<?> clazz = getScanSpecOperandType(query.getAttributeName(), tableItemType);
 
         ScanSpec scanSpec = new ScanSpec();
@@ -341,8 +322,8 @@ public class DynamoDocumentStoreTemplate extends AbstractDynamoDbTemplate {
             } else if (query.getCondition().getComparisonOperator() == Operators.LESS_THAN_OR_EQUALS) {
                 if (query.getCondition().getValues().size() == 1) {
                     filterExpression.append(query.getAttributeName()).append(" <= ").append(":").append(valueMapCount);
-                    final Object valueInstance = clazz.getConstructor(String.class)
-                            .newInstance(query.getCondition().getValues().iterator().next());
+                    final Object valueInstance = clazz.getConstructor(String.class).newInstance(
+                            query.getCondition().getValues().iterator().next());
                     valueMap.with(":" + valueMapCount, valueInstance);
                     valueMapCount++;
                 } else {
@@ -351,8 +332,8 @@ public class DynamoDocumentStoreTemplate extends AbstractDynamoDbTemplate {
             } else if (query.getCondition().getComparisonOperator() == Operators.GREATER_THAN_OR_EQUALS) {
                 if (query.getCondition().getValues().size() == 1) {
                     filterExpression.append(query.getAttributeName()).append(" >= ").append(":").append(valueMapCount);
-                    final Object valueInstance = clazz.getConstructor(String.class)
-                            .newInstance(query.getCondition().getValues().iterator().next());
+                    final Object valueInstance = clazz.getConstructor(String.class).newInstance(
+                            query.getCondition().getValues().iterator().next());
                     valueMap.with(":" + valueMapCount, valueInstance);
                     valueMapCount++;
                 } else {
@@ -367,20 +348,7 @@ public class DynamoDocumentStoreTemplate extends AbstractDynamoDbTemplate {
         if (valueMap.size() > 0) {
             scanSpec = scanSpec.withValueMap(valueMap);
         }
-
-        if (maxPageSizeOverridden(maxPageSize)) {
-            scanSpec = scanSpec.withMaxPageSize(maxPageSize);
-        }
-
         return scanSpec;
-    }
-
-    private boolean maxPageSizeOverridden(final int maxPageSize) {
-        if (maxPageSize > 0) {
-            return true;
-        }
-
-        return false;
     }
 
     private <T extends Item> Class<?> getScanSpecOperandType(final String fieldName, final Class<T> itemClass) {

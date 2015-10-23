@@ -63,13 +63,6 @@ public class AbstractDatabaseTemplateTest {
                 return (Collection<T>) items;
             }
 
-            @SuppressWarnings("unchecked")
-            @Override
-            public <T extends Item> Collection<T> fetch(final Query query, final Class<T> itemClass,
-                    final int maxPageSize) {
-                return (Collection<T>) items;
-            }
-
             @Override
             public GeneratedKeyHolder generateKeys(final SequenceKeyGenerator sequenceKeyGenerator) {
                 return null;
@@ -78,6 +71,7 @@ public class AbstractDatabaseTemplateTest {
             @Override
             public void delete(final Item item, final PersistenceExceptionHandler<?>... persistenceExceptionHandlers) {
             }
+
         };
 
         // When
@@ -111,13 +105,6 @@ public class AbstractDatabaseTemplateTest {
                 return (Collection<T>) items;
             }
 
-            @SuppressWarnings("unchecked")
-            @Override
-            public <T extends Item> Collection<T> fetch(final Query query, final Class<T> itemClass,
-                    final int maxPageSize) {
-                return (Collection<T>) items;
-            }
-
             @Override
             public void delete(final Item item, final PersistenceExceptionHandler<?>... persistenceExceptionHandlers) {
             }
@@ -132,6 +119,7 @@ public class AbstractDatabaseTemplateTest {
             public GeneratedKeyHolder generateKeys(final SequenceKeyGenerator sequenceKeyGenerator) {
                 return null;
             }
+
         };
 
         // When
